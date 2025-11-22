@@ -1,0 +1,74 @@
+import { dishManager } from "../services/dishManager.service";
+import type { Request, Response } from "express";
+import { io } from "../socketConnection";
+class DishController {
+  async GetAllDishes(req: Request, res: Response) {
+    try {
+      const data = await dishManager.getAllDishes();
+      if (data)
+        res.status(201).json({
+          msg: "All data fetched sucessfully!",
+          success: true,
+          data,
+        });
+    } catch (error) {
+      res.status(400).json({ error: "Server Error: failed fetching dishes!" });
+    }
+  }
+  async UpdatePublishedStatus(req: Request, res: Response) {
+    try {
+      const data = req.body;
+      if (!data.dishId || typeof data.dishId !== "number") {
+        return res
+          .status(400)
+          .json({ error: "dish id is required and must be number" });
+      }
+      console.log(typeof data.isPublished);
+      if (
+        data.isPublished === undefined ||
+        typeof data.isPublished !== "boolean"
+      ) {
+        return res.status(400).json({ error: "isPublished must be boolean" });
+      }
+      const result = await dishManager.update(data.isPublished, data.dishId);
+      // emit message to client tha update is trigger and send updated data
+      io.emit("statusUpdate", result);
+
+      res.status(201).json({
+        msg: "updated status sucessfully!",
+        success: true,
+      });
+    } catch (error) {
+      res.status(400).json({ error: "Server Error: failed fetching dishes!" });
+    }
+  }
+  async CreateDish(req: Request, res: Response) {
+    try {
+      const data = req.body;
+      if (typeof data.dishName !== "string") {
+        return res
+          .status(400)
+          .json({ error: "name is required and must be string" });
+      } else if (typeof data.imageUrl !== "string") {
+        return res
+          .status(400)
+          .json({ error: "imageUrl is required and must be string" });
+      }
+      if (data.isPublished && typeof data.isPublished !== "boolean") {
+        return res.status(400).json({ error: "isPublished must be boolean" });
+      }
+      const result = await dishManager.createDish(data);
+      console.log(result);
+      if (result)
+        res.status(201).json({
+          msg: "Dish Created sucessfully!",
+          success: true,
+          data,
+        });
+    } catch (error) {
+      res.status(400).json({ msg: "Server Error: failed creating dish!" });
+    }
+  }
+}
+
+export const dishController = new DishController();
