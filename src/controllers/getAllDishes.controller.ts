@@ -1,10 +1,11 @@
 import { dishManager } from "../services/dishManager.service";
 import type { Request, Response } from "express";
-import { io } from "../socketConnection";
+import { io } from "../server";
 class DishController {
   async GetAllDishes(req: Request, res: Response) {
     try {
       const data = await dishManager.getAllDishes();
+      console.log(data);
       if (data)
         res.status(201).json({
           msg: "All data fetched sucessfully!",
@@ -20,7 +21,7 @@ class DishController {
       const data = req.body;
       if (!data.dishId || typeof data.dishId !== "number") {
         return res
-          .status(400)
+          .status(500)
           .json({ error: "dish id is required and must be number" });
       }
       console.log(typeof data.isPublished);
@@ -28,18 +29,21 @@ class DishController {
         data.isPublished === undefined ||
         typeof data.isPublished !== "boolean"
       ) {
-        return res.status(400).json({ error: "isPublished must be boolean" });
+        return res.status(500).json({ error: "isPublished must be boolean" });
       }
+
       const result = await dishManager.update(data.isPublished, data.dishId);
-      // emit message to client tha update is trigger and send updated data
-      io.emit("statusUpdate", result);
+      // emit message to all connected clients with updated data
+      io.sockets.emit("statusUpdated", result);
 
       res.status(201).json({
         msg: "updated status sucessfully!",
         success: true,
       });
     } catch (error) {
-      res.status(400).json({ error: "Server Error: failed fetching dishes!" });
+      res
+        .status(400)
+        .json({ err: "Server Error: failed updating dishes!", data: error });
     }
   }
   async CreateDish(req: Request, res: Response) {

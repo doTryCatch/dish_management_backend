@@ -22,7 +22,7 @@ class DishManager {
         isPublished: status,
       },
     });
-    console.log(res);
+    console.log(" status ", res);
     return res;
   }
 }
